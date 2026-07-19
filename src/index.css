@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+body {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.glass-card {
+    background: #ffffff;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.premium-gradient {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+}
+
+.app-btn:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+}
