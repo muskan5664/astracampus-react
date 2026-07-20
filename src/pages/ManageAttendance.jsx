@@ -101,7 +101,7 @@ export default function ManageAttendance() {
         if (isViewMode) return;
         
         if (Object.keys(attendanceData).length < students.length) {
-            return console.log("⚠️ Please mark Present or Absent for ALL students before submitting.");
+            return window.alert("⚠️ Please mark Present or Absent for ALL students before submitting.");
         }
 
         if (!true || window.confirm(`Submit final attendance for Class ${selectedClass} on ${date}?`)) return;
@@ -122,7 +122,7 @@ export default function ManageAttendance() {
                     createdAt: serverTimestamp()
                 });
             }
-            console.log("✅ Attendance Saved Successfully!");
+            window.alert("✅ Attendance Saved Successfully!");
             setIsViewMode(true);
         } catch (error) {
             console.log("Error saving attendance: " + error.message);

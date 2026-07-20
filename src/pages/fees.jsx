@@ -16,6 +16,7 @@ export default function Fees() {
     const [schoolInfo, setSchoolInfo] = useState({ name: "AstraCampus School" });
 
     useEffect(() => {
+        let unsubs = [];
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
             if (user) {
                 // Fetch User Fee Data
@@ -77,19 +78,19 @@ export default function Fees() {
                     where("studentId", "==", user.uid)
                 );
                 
-                onSnapshot(recQ, (snap) => {
+                unsubs.push(onSnapshot(recQ, (snap) => {
                     let recs = [];
                     snap.forEach(d => recs.push({ id: d.id, ...d.data() }));
                     recs.sort((a, b) => (b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : Date.now()) - (a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : Date.now()));
                     setReceipts(recs);
                     setLoading(false);
-                });
+                }));
 
             } else {
                 navigate("/");
             }
         });
-        return () => unsubscribe();
+        return () => { unsubscribe(); unsubs.forEach(u => u()); };
     }, [navigate]);
 
     return (

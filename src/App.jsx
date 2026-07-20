@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase-init';
+import { auth, db } from './firebase-init';
+import { doc, getDoc } from 'firebase/firestore';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -46,13 +47,30 @@ import ViewResults from './pages/ViewResults';
 import ViewFeedback from './pages/ViewFeedback';
 import ManageInstitutes from './pages/ManageInstitutes';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        try {
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          if (userDoc.exists()) {
+            setRole(userDoc.data().role || 'student');
+          } else {
+            setRole('student');
+          }
+        } catch(e) {
+          console.error("Error fetching user role:", e);
+          setRole('student');
+        }
+      } else {
+        setUser(null);
+        setRole(null);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -60,6 +78,11 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (!user) return <Navigate to="/" />;
+  
+  if (allowedRoles && role && !allowedRoles.includes(role)) {
+    return <Navigate to="/dashboard" />;
+  }
+  
   return children;
 };
 
@@ -71,7 +94,7 @@ function App() {
         
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
         <Route path="/course-subjects" element={<ProtectedRoute><CourseSubjects /></ProtectedRoute>} />
         <Route path="/lectures" element={<ProtectedRoute><Lectures /></ProtectedRoute>} />
@@ -91,26 +114,26 @@ function App() {
         <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
 
         {/* New Admin / Teacher Routes */}
-        <Route path="/add-results" element={<ProtectedRoute><AddResults /></ProtectedRoute>} />
-        <Route path="/create-assignment" element={<ProtectedRoute><CreateAssignment /></ProtectedRoute>} />
-        <Route path="/manage-classes" element={<ProtectedRoute><ManageClasses /></ProtectedRoute>} />
-        <Route path="/manage-doubts" element={<ProtectedRoute><ManageDoubts /></ProtectedRoute>} />
-        <Route path="/manage-gallery" element={<ProtectedRoute><ManageGallery /></ProtectedRoute>} />
-        <Route path="/manage-materials" element={<ProtectedRoute><ManageMaterials /></ProtectedRoute>} />
-        <Route path="/manage-notices" element={<ProtectedRoute><ManageNotices /></ProtectedRoute>} />
-        <Route path="/manage-fees" element={<ProtectedRoute><ManageFees /></ProtectedRoute>} />
-        <Route path="/manage-complaints" element={<ProtectedRoute><ManageComplaints /></ProtectedRoute>} />
-        <Route path="/manage-attendance" element={<ProtectedRoute><ManageAttendance /></ProtectedRoute>} />
-        <Route path="/manage-staff" element={<ProtectedRoute><ManageStaff /></ProtectedRoute>} />
-        <Route path="/manage-students" element={<ProtectedRoute><ManageStudents /></ProtectedRoute>} />
-        <Route path="/manage-tests" element={<ProtectedRoute><ManageTests /></ProtectedRoute>} />
-        <Route path="/manage-timetable" element={<ProtectedRoute><ManageTimetable /></ProtectedRoute>} />
-        <Route path="/manage-leaves" element={<ProtectedRoute><ManageLeaves /></ProtectedRoute>} />
-        <Route path="/teacher-dashboard" element={<ProtectedRoute><TeacherDashboard /></ProtectedRoute>} />
-        <Route path="/upload-video" element={<ProtectedRoute><UploadVideo /></ProtectedRoute>} />
-        <Route path="/view-results" element={<ProtectedRoute><ViewResults /></ProtectedRoute>} />
-        <Route path="/view-feedback" element={<ProtectedRoute><ViewFeedback /></ProtectedRoute>} />
-        <Route path="/manage-institutes" element={<ProtectedRoute><ManageInstitutes /></ProtectedRoute>} />
+        <Route path="/add-results" element={<ProtectedRoute allowedRoles={['teacher', 'staff', 'admin']}><AddResults /></ProtectedRoute>} />
+        <Route path="/create-assignment" element={<ProtectedRoute allowedRoles={['teacher', 'staff', 'admin']}><CreateAssignment /></ProtectedRoute>} />
+        <Route path="/manage-classes" element={<ProtectedRoute allowedRoles={['admin']}><ManageClasses /></ProtectedRoute>} />
+        <Route path="/manage-doubts" element={<ProtectedRoute allowedRoles={['admin']}><ManageDoubts /></ProtectedRoute>} />
+        <Route path="/manage-gallery" element={<ProtectedRoute allowedRoles={['admin']}><ManageGallery /></ProtectedRoute>} />
+        <Route path="/manage-materials" element={<ProtectedRoute allowedRoles={['admin']}><ManageMaterials /></ProtectedRoute>} />
+        <Route path="/manage-notices" element={<ProtectedRoute allowedRoles={['admin']}><ManageNotices /></ProtectedRoute>} />
+        <Route path="/manage-fees" element={<ProtectedRoute allowedRoles={['admin']}><ManageFees /></ProtectedRoute>} />
+        <Route path="/manage-complaints" element={<ProtectedRoute allowedRoles={['admin']}><ManageComplaints /></ProtectedRoute>} />
+        <Route path="/manage-attendance" element={<ProtectedRoute allowedRoles={['admin']}><ManageAttendance /></ProtectedRoute>} />
+        <Route path="/manage-staff" element={<ProtectedRoute allowedRoles={['admin']}><ManageStaff /></ProtectedRoute>} />
+        <Route path="/manage-students" element={<ProtectedRoute allowedRoles={['admin']}><ManageStudents /></ProtectedRoute>} />
+        <Route path="/manage-tests" element={<ProtectedRoute allowedRoles={['admin']}><ManageTests /></ProtectedRoute>} />
+        <Route path="/manage-timetable" element={<ProtectedRoute allowedRoles={['admin']}><ManageTimetable /></ProtectedRoute>} />
+        <Route path="/manage-leaves" element={<ProtectedRoute allowedRoles={['admin']}><ManageLeaves /></ProtectedRoute>} />
+        <Route path="/teacher-dashboard" element={<ProtectedRoute allowedRoles={['teacher', 'staff', 'admin']}><TeacherDashboard /></ProtectedRoute>} />
+        <Route path="/upload-video" element={<ProtectedRoute allowedRoles={['teacher', 'staff', 'admin']}><UploadVideo /></ProtectedRoute>} />
+        <Route path="/view-results" element={<ProtectedRoute allowedRoles={['teacher', 'staff', 'admin']}><ViewResults /></ProtectedRoute>} />
+        <Route path="/view-feedback" element={<ProtectedRoute allowedRoles={['teacher', 'staff', 'admin']}><ViewFeedback /></ProtectedRoute>} />
+        <Route path="/manage-institutes" element={<ProtectedRoute allowedRoles={['admin']}><ManageInstitutes /></ProtectedRoute>} />
       </Routes>
     </Router>
   );

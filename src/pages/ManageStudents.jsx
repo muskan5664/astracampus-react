@@ -108,7 +108,7 @@ export default function ManageStudents() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!adminSchoolId) return console.log("School ID missing!");
+        if (!adminSchoolId) return window.alert("School ID missing!");
 
         setIsSaving(true);
         const studentData = {
@@ -136,7 +136,7 @@ export default function ManageStudents() {
             } else {
                 studentData.createdAt = serverTimestamp();
                 await addDoc(collection(db, "users"), studentData);
-                console.log("New Student Registered Successfully!");
+                window.alert("New Student Registered Successfully!");
             }
             resetForm();
             setActiveTab('listTab');
@@ -168,7 +168,7 @@ export default function ManageStudents() {
     const handleDelete = async (id) => {
         if (window.confirm("Are you absolutely sure you want to delete this record?")) {
             await deleteDoc(doc(db, "users", id));
-            console.log("Deleted successfully!");
+            window.alert("Deleted successfully!");
             loadStudents();
         }
     };

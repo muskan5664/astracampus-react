@@ -53,6 +53,7 @@ export default function Dashboard() {
   const [notice, setNotice] = useState(null);
 
   useEffect(() => {
+    let unsubs = [];
     const hour = new Date().getHours();
     setGreeting(
       hour < 12
@@ -97,17 +98,17 @@ export default function Dashboard() {
                 collection(db, "assignments"),
                 where("schoolId", "==", schoolId)
               );
-              onSnapshot(assignQ, (snap) => {
+              unsubs.push(onSnapshot(assignQ, (snap) => {
                 let filtered = snap.docs.filter(d => String(d.data().targetClass || d.data().className || "") === targetClassStr);
                 setBadges((prev) => ({ ...prev, assignments: filtered.length }));
-              });
+              }));
 
               // Live Classes Logic
               const liveQ = query(
                 collection(db, "live_classes"),
                 where("schoolId", "==", schoolId)
               );
-              onSnapshot(liveQ, (snap) => {
+              unsubs.push(onSnapshot(liveQ, (snap) => {
                 let filtered = snap.docs.filter(d => String(d.data().targetClass || d.data().className || "") === targetClassStr);
                 
                 let classes = [];
@@ -116,7 +117,7 @@ export default function Dashboard() {
                 classes.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
                 
                 setLiveClasses(classes);
-              });
+              }));
             }
 
             if (schoolId) {
@@ -125,20 +126,20 @@ export default function Dashboard() {
                 collection(db, "announcements"),
                 where("schoolId", "==", schoolId)
               );
-              onSnapshot(noticeQ, (snap) => {
+              unsubs.push(onSnapshot(noticeQ, (snap) => {
                 let allNotices = [];
                 snap.forEach((d) => allNotices.push({ id: d.id, ...d.data() }));
                 allNotices.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
                 
                 if (allNotices.length > 0) setNotice(allNotices[0]);
-              });
+              }));
 
               // Attendance Logic
               const attQ = query(
                 collection(db, "attendance"),
                 where("schoolId", "==", schoolId)
               );
-              onSnapshot(attQ, (snap) => {
+              unsubs.push(onSnapshot(attQ, (snap) => {
                 let presentCount = 0;
                 let totalCount = 0;
                 
@@ -152,7 +153,7 @@ export default function Dashboard() {
                 
                 let percentage = totalCount === 0 ? "N/A" : Math.round((presentCount / totalCount) * 100) + "%";
                 setStats((prev) => ({ ...prev, attendance: percentage }));
-              });
+              }));
             }
           } else {
              navigate("/");
@@ -165,7 +166,10 @@ export default function Dashboard() {
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      unsubs.forEach(u => u());
+    };
   }, [navigate]);
 
   const handleLogout = async () => {

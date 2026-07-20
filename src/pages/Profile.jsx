@@ -47,7 +47,7 @@ export default function Profile() {
                     }
                 } catch (error) {
                     console.error("Error fetching/syncing profile: ", error);
-                    console.log("Error loading profile details.");
+                    window.alert("Error loading profile details.");
                 }
                 setLoading(false);
             } else {

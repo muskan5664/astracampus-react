@@ -101,7 +101,7 @@ export default function Attendance() {
                             const isPresent = record.status === 'present';
                             const dateString = record.date ? new Date(record.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
                             return (
-                                <div key={index} className="bg-white p-4 rounded-[20px] shadow-[0_2px_10px_-2px_rgba(0,0,0,0.02)] border border-slate-100 flex justify-between items-center transition hover:border-slate-200">
+                                <div key={record.id || record.date || index} className="bg-white p-4 rounded-[20px] shadow-[0_2px_10px_-2px_rgba(0,0,0,0.02)] border border-slate-100 flex justify-between items-center transition hover:border-slate-200">
                                     <div className="flex items-center gap-3.5">
                                         <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0 border ${isPresent ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-red-500 bg-red-50 border-red-100'}`}>
                                             <i className={`fas ${isPresent ? 'fa-check text-emerald-500' : 'fa-times text-red-500'}`}></i>

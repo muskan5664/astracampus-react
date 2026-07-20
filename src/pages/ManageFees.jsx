@@ -176,19 +176,24 @@ export default function ManageFees() {
     }, [currentStructure, applicableMonthsTillNow, selectedStudent]);
 
     const computedAmount = React.useMemo(() => {
-        if (!currentStructure) return Number(paymentForm.amount) || 0;
         let sum = 0;
-        currentStructure.heads.forEach(h => {
-            const sel = selectedFees[h.name];
-            if (!sel || !sel.selected) return;
-            if (h.frequency === 'Monthly') {
-                sum += (h.amount * (sel.months?.length || 0));
-            } else {
-                sum += h.amount;
-            }
-        });
-        return sum;
-    }, [selectedFees, currentStructure, paymentForm.amount]);
+        if (!currentStructure) {
+            sum = Number(paymentForm.amount) || 0;
+        } else {
+            currentStructure.heads.forEach(h => {
+                const sel = selectedFees[h.name];
+                if (!sel || !sel.selected) return;
+                if (h.frequency === 'Monthly') {
+                    sum += (h.amount * (sel.months?.length || 0));
+                } else {
+                    sum += h.amount;
+                }
+            });
+        }
+        const discount = Number(paymentForm.discount) || 0;
+        const fine = Number(paymentForm.fine) || 0;
+        return Math.max(0, sum - discount + fine);
+    }, [selectedFees, currentStructure, paymentForm.amount, paymentForm.discount, paymentForm.fine]);
     
 
     const [isProcessing, setIsProcessing] = useState(false);
@@ -202,68 +207,71 @@ export default function ManageFees() {
     });
 
     useEffect(() => {
+        let unsubs = [];
         const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
             if (user) {
                 const adminDoc = await getDoc(doc(db, 'users', user.uid));
                 if (adminDoc.exists()) {
                     const schoolId = adminDoc.data().schoolId;
                     setAdminSchoolId(schoolId);
-                    fetchInitialData(schoolId);
+                    
+                    // Fetch Institutes
+                    getDoc(doc(db, "institutes", schoolId)).then(instDoc => {
+                        if (instDoc.exists()) setSchoolInfo(instDoc.data());
+                    });
+
+                    // Fetch Students
+                    const stuQ = query(collection(db, "users"), where("schoolId", "==", schoolId), where("role", "==", "student"));
+                    unsubs.push(onSnapshot(stuQ, (snap) => {
+                        let stu = [];
+                        snap.forEach(d => {
+                            const data = d.data();
+                            stu.push({ id: d.id, ...data });
+                        });
+                        setStudents(stu);
+                    }));
+
+                    // Fetch Fee Structures
+                    const structQ = query(collection(db, "feeStructures"), where("schoolId", "==", schoolId));
+                    unsubs.push(onSnapshot(structQ, (snap) => {
+                        let structs = [];
+                        snap.forEach(d => structs.push({ id: d.id, ...d.data() }));
+                        setFeeStructures(structs);
+                    }));
+
+                    // Fetch Receipts
+                    const recQ = query(collection(db, "receipts"), where("schoolId", "==", schoolId));
+                    unsubs.push(onSnapshot(recQ, (snap) => {
+                        let recs = [];
+                        let collected = 0;
+                        let todayColl = 0;
+                        const today = new Date().toDateString();
+                        
+                        snap.forEach(d => {
+                            const data = d.data();
+                            recs.push({ id: d.id, ...data });
+                            if (data.status !== "Cancelled") {
+                                collected += data.amount;
+                                if (data.createdAt && typeof data.createdAt.toDate === 'function' && data.createdAt.toDate().toDateString() === today) {
+                                    todayColl += data.amount;
+                                }
+                            }
+                        });
+                        recs.sort((a, b) => (b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : Date.now()) - (a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : Date.now()));
+                        setReceipts(recs);
+                        setStats(prev => ({ ...prev, totalCollected: collected, todayCollection: todayColl }));
+                        setLoading(false);
+                    }));
                 }
             } else {
                 navigate('/');
             }
         });
-        return () => unsubscribeAuth();
+        return () => {
+            unsubscribeAuth();
+            unsubs.forEach(u => u());
+        };
     }, [navigate]);
-
-    const fetchInitialData = async (schoolId) => {
-        const instDoc = await getDoc(doc(db, "institutes", schoolId));
-        if (instDoc.exists()) setSchoolInfo(instDoc.data());
-        // Fetch Students
-        const stuQ = query(collection(db, "users"), where("schoolId", "==", schoolId), where("role", "==", "student"));
-        onSnapshot(stuQ, (snap) => {
-            let stu = [];
-            snap.forEach(d => {
-                const data = d.data();
-                stu.push({ id: d.id, ...data });
-            });
-            setStudents(stu);
-        });
-
-        // Fetch Fee Structures
-        const structQ = query(collection(db, "feeStructures"), where("schoolId", "==", schoolId));
-        onSnapshot(structQ, (snap) => {
-            let structs = [];
-            snap.forEach(d => structs.push({ id: d.id, ...d.data() }));
-            setFeeStructures(structs);
-        });
-
-        // Fetch Receipts
-        const recQ = query(collection(db, "receipts"), where("schoolId", "==", schoolId));
-        onSnapshot(recQ, (snap) => {
-            let recs = [];
-            let collected = 0;
-            let todayColl = 0;
-            const today = new Date().toDateString();
-            
-            snap.forEach(d => {
-                const data = d.data();
-                recs.push({ id: d.id, ...data });
-                if (data.status !== "Cancelled") {
-                    collected += data.amount;
-                    if (data.createdAt && typeof data.createdAt.toDate === 'function' && data.createdAt.toDate().toDateString() === today) {
-                        todayColl += data.amount;
-                    }
-                }
-            });
-            recs.sort((a, b) => (b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : Date.now()) - (a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : Date.now()));
-            setReceipts(recs);
-            setStats(prev => ({ ...prev, totalCollected: collected, todayCollection: todayColl }));
-            setLoading(false);
-        });
-    };
-
     const handleAddHead = () => {
         setNewStructure(prev => ({
             ...prev,
@@ -278,7 +286,7 @@ export default function ManageFees() {
     };
 
     const saveFeeStructure = async () => {
-        if (!newStructure.className) return console.log("Please select a class");
+        if (!newStructure.className) return window.alert("Please select a class");
         try {
             const totalAmount = newStructure.heads.reduce((sum, h) => sum + h.amount, 0);
             await addDoc(collection(db, "feeStructures"), {
@@ -293,14 +301,35 @@ export default function ManageFees() {
             setNewStructure({ className: "", session: "2024-2025", heads: [{ name: "Tuition Fee", amount: 0 }] });
         } catch (error) {
             console.error(error);
-            console.log("Failed to save fee structure");
+            window.alert("Failed to save fee structure");
         }
     };
 
     const handleCollectFee = async (e) => {
         e.preventDefault();
-        if (!selectedStudent) return console.log("Select a student");
-        if ((currentStructure ? computedAmount : Number(paymentForm.amount)) <= 0) return console.log("Enter valid amount");
+        if (!selectedStudent) return window.alert("Select a student");
+        
+        let sum = 0;
+        if (!currentStructure) {
+            sum = Number(paymentForm.amount) || 0;
+        } else {
+            currentStructure.heads.forEach(h => {
+                const sel = selectedFees[h.name];
+                if (!sel || !sel.selected) return;
+                if (h.frequency === 'Monthly') {
+                    sum += (h.amount * (sel.months?.length || 0));
+                } else {
+                    sum += h.amount;
+                }
+            });
+        }
+        
+        const discount = Number(paymentForm.discount) || 0;
+        if (discount > sum) {
+            return window.alert("Discount cannot be greater than the fee amount");
+        }
+
+        if (computedAmount <= 0) return window.alert("Enter valid amount");
 
         setIsProcessing(true);
         try {
@@ -313,7 +342,7 @@ export default function ManageFees() {
                 admissionNo: selectedStudent.admissionNo || selectedStudent.studentId || "N/A",
                 className: selectedStudent.class || "N/A",
                 session: selectedStudent.session || "2024-2025",
-                amount: currentStructure ? computedAmount : Number(paymentForm.amount),
+                amount: computedAmount,
                 feeHeads: currentStructure ? currentStructure.heads.filter(h => selectedFees[h.name]?.selected && (h.frequency !== 'Monthly' || (selectedFees[h.name].months?.length > 0))).map(h => ({
                     name: h.frequency === 'Monthly' ? `${h.name} (${selectedFees[h.name].months.join(', ')})` : h.name,
                     amount: h.frequency === 'Monthly' ? (h.amount * (selectedFees[h.name].months?.length || 0)) : h.amount
@@ -335,7 +364,7 @@ export default function ManageFees() {
             const currentTotal = selectedStudent.totalFee || 0;
             
             await updateDoc(userRef, {
-                paidFee: currentPaid + (currentStructure ? computedAmount : Number(paymentForm.amount))
+                paidFee: currentPaid + computedAmount
             });
 
             console.log(`Fee Collected! Receipt No: ${receiptNo}`);
@@ -347,7 +376,7 @@ export default function ManageFees() {
             
         } catch (error) {
             console.error(error);
-            console.log("Payment failed");
+            window.alert("Payment failed");
         } finally {
             setIsProcessing(false);
         }
@@ -364,16 +393,16 @@ export default function ManageFees() {
                 const currentPaid = studentSnap.data().paidFee || 0;
                 await updateDoc(studentRef, { paidFee: Math.max(0, currentPaid - amount) });
             }
-            console.log("Receipt cancelled successfully");
+            window.alert("Receipt cancelled successfully");
         } catch (error) {
             console.error(error);
-            console.log("Failed to cancel receipt");
+            window.alert("Failed to cancel receipt");
         }
     };
 
     
     const exportReceiptsCSV = () => {
-        if (receipts.length === 0) return console.log("No receipts to export");
+        if (receipts.length === 0) return window.alert("No receipts to export");
         const headers = ["Receipt No", "Date", "Student Name", "Admission No", "Class", "Amount", "Discount", "Fine", "Net Paid", "Mode", "Status"];
         const rows = receipts.map(r => [
             r.receiptNo,
@@ -628,7 +657,7 @@ export default function ManageFees() {
         <button 
             onClick={() => {
                 const pending = Math.max(0, computedTotalFee - (selectedStudent.paidFee||0));
-                if(pending <= 0) return console.log("No pending fees!");
+                if(pending <= 0) return window.alert("No pending fees!");
                 const msg = encodeURIComponent(`Dear Parent, this is a gentle reminder that fee of Rs ${pending} is pending for ${selectedStudent.name}. Please pay at the earliest.`);
                 window.open(`https://wa.me/?text=${msg}`, '_blank');
             }}
@@ -664,7 +693,7 @@ export default function ManageFees() {
 
                                                     const sel = selectedFees[h.name] || { selected: false, months: [] };
                                                     return (
-                                                        <div key={i} className="border border-slate-200 rounded-lg bg-white p-3 shadow-sm">
+                                                        <div key={h.name || i} className="border border-slate-200 rounded-lg bg-white p-3 shadow-sm">
                                                             <div className="flex items-center justify-between">
                                                                 <label className="flex items-center gap-2 cursor-pointer font-bold text-sm text-slate-700">
                                                                     <input 
@@ -918,7 +947,7 @@ export default function ManageFees() {
                                             </div>
                                             <div className="bg-slate-50 rounded-lg p-3 space-y-1.5">
                                                 {struct.heads.map((h, i) => (
-                                                    <div key={i} className="flex justify-between text-xs font-medium text-slate-600">
+                                                    <div key={h.name || i} className="flex justify-between text-xs font-medium text-slate-600">
                                                         <span>{h.name}</span>
                                                         <span className="font-bold text-slate-500 text-[10px] mr-2">{h.frequency || "Monthly"}</span><span className="font-bold">₹ {h.amount}</span>
                                                     </div>

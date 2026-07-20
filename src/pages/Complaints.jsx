@@ -40,7 +40,7 @@ export default function Complaints() {
                 status: "pending",
                 createdAt: serverTimestamp()
             });
-            console.log("Complaint Submitted Successfully! Admin will check it soon.");
+            window.alert("Complaint Submitted Successfully! Admin will check it soon.");
             navigate('/dashboard');
         } catch(e) {
             console.log("Error saving complaint: " + e.message);

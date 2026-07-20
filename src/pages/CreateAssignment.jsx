@@ -77,8 +77,8 @@ export default function CreateAssignment() {
     };
 
     const handlePublish = async () => {
-        if (!adminSchoolId) return console.log("School ID missing!");
-        if (!title.trim() || !targetClass) return console.log("Title and Class are required!");
+        if (!adminSchoolId) return window.alert("School ID missing!");
+        if (!title.trim() || !targetClass) return window.alert("Title and Class are required!");
 
         setIsPublishing(true);
         try {
@@ -102,7 +102,7 @@ export default function CreateAssignment() {
 
     const handleSaveMarks = async (submissionId) => {
         const marksValue = marksInputs[submissionId];
-        if (!marksValue || !marksValue.trim()) return console.log("Enter marks first!");
+        if (!marksValue || !marksValue.trim()) return window.alert("Enter marks first!");
         try {
             await updateDoc(doc(db, "submissions", submissionId), { marks: marksValue.trim() });
             console.log("🎯 Marks saved successfully!");

@@ -243,7 +243,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 gap-3">
             {actionButtons.map((btn, i) => (
               <button
-                key={i}
+                key={btn.path || i}
                 onClick={() => navigate(btn.path)}
                 className={`${btn.bgClass} p-4 rounded-2xl flex flex-col items-center border transition shadow-sm`}
               >

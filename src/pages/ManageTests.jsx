@@ -205,7 +205,7 @@ export default function ManageTests() {
                             const percentage = (r.score / r.totalQuestions) * 100;
                             const badgeClass = percentage >= 40 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700";
                             return (
-                                <div key={i} className="p-3 border border-gray-100 rounded-xl bg-gray-50 flex justify-between items-center hover:bg-gray-100 transition">
+                                <div key={r.id || i} className="p-3 border border-gray-100 rounded-xl bg-gray-50 flex justify-between items-center hover:bg-gray-100 transition">
                                     <div>
                                         <h4 className="font-bold text-gray-800 text-sm capitalize">{r.studentName || "Unknown Student"}</h4>
                                         <p className="text-[11px] font-bold text-purple-600 mt-0.5">{r.testTitle}</p>

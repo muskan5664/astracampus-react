@@ -95,7 +95,7 @@ export default function ManageStaff() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!adminSchoolId) return console.log("School ID missing!");
+        if (!adminSchoolId) return window.alert("School ID missing!");
 
         setIsSaving(true);
         const staffData = {
@@ -157,7 +157,7 @@ export default function ManageStaff() {
     const handleDelete = async (id) => {
         if (window.confirm("Delete this staff member permanently?")) {
             await deleteDoc(doc(db, "users", id));
-            console.log("Deleted!");
+            window.alert("Deleted!");
             loadStaff();
         }
     };

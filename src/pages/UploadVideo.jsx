@@ -93,7 +93,7 @@ export default function UploadVideo() {
         localStorage.removeItem('ast_class');
         localStorage.removeItem('ast_course');
         localStorage.removeItem('ast_subject');
-        console.log("Cache Cleared Successfully!");
+        window.alert("Cache Cleared Successfully!");
         window.location.reload();
     };
 
@@ -120,7 +120,7 @@ export default function UploadVideo() {
 
     const saveCourse = async () => {
         const cName = newCourseName.trim();
-        if (!cName) return console.log("Enter valid course name!");
+        if (!cName) return window.alert("Enter valid course name!");
         const metaId = editingMetaId ? editingMetaId : `${adminSchoolId}_${cName}`.replace(/\s+/g, '_').toLowerCase();
         
         await setDoc(doc(db, "courseMeta", metaId), { 
@@ -141,7 +141,7 @@ export default function UploadVideo() {
     };
 
     const saveSubject = () => {
-        if (!newSubjectName.trim()) return console.log("Enter valid subject name!");
+        if (!newSubjectName.trim()) return window.alert("Enter valid subject name!");
         setIsSubjectModalOpen(false);
         setActiveSubject(newSubjectName.trim());
         setCurrentStep(3);
@@ -170,7 +170,7 @@ export default function UploadVideo() {
 
     const handleVideoSubmit = async (e) => {
         e.preventDefault();
-        if (!videoFile) return console.log("Select video file!");
+        if (!videoFile) return window.alert("Select video file!");
 
         localStorage.setItem('ast_teacher', teacherName);
         localStorage.setItem('ast_class', targetClass);
